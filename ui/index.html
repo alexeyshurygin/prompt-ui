@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatGPT-4o WebApp</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        #chat-container {
+            width: 60%;
+            height: 80%;
+            background-color: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+        }
+        #chat-output {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .chat-message {
+            margin: 10px 0;
+        }
+        .user-message {
+            text-align: right;
+        }
+        .bot-message {
+            text-align: left;
+        }
+        #chat-input {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #ddd;
+            background-color: #fafafa;
+        }
+        #input-field {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        #send-button {
+            padding: 10px 20px;
+            border: none;
+            background-color: #FFA500; /* Changed to orange */
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        #api-key-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            background-color: #fafafa;
+        }
+        #api-key-field {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: 60%;
+        }
+        #set-api-key-button {
+            padding: 10px 20px;
+            border: none;
+            background-color: #FFA500; /* Changed to orange */
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="chat-container">
+        <div id="api-key-container">
+            <input type="text" id="api-key-field" placeholder="Enter your API key here..." />
+            <button id="set-api-key-button">Set API Key</button>
+        </div>
+        <div id="chat-output"></div>
+        <div id="chat-input">
+            <input type="text" id="input-field" placeholder="Type your message here..." oninput="debounceInput()" />
+            <script>
+                let typingTimer;
+                const doneTypingInterval = 1000;
+
+                function debounceInput() {
+                    clearTimeout(typingTimer);
+                    typingTimer = setTimeout(sendMessage, doneTypingInterval);
+                }
+
+                async function sendMessage() {
+                    const inputField = document.getElementById('input-field');
+                    const message = inputField.value.trim();
+
+                    if (message === '') return;
+
+                    addMessageToChat(message, 'user');
+
+                    const response = await callChatGPTAPI(message);
+
+                    if (response && response.choices && response.choices[0].message.content) {
+                        addMessageToChat(response.choices[0].message.content, 'bot');
+                    } else {
+                        addMessageToChat('Error: Unable to fetch response.', 'bot');
+                    }
+                }
+
+                document.getElementById('input-field').addEventListener('input', debounceInput);
+            </script>
+            <button id="send-button">Send</button>
+        </div>
+    </div>
+
+    <script>
+        let apiKey = '';  // Initialize as empty
+
+        document.getElementById('set-api-key-button').addEventListener('click', () => {
+            const apiKeyField = document.getElementById('api-key-field');
+            apiKey = apiKeyField.value.trim();
+            if (apiKey !== '') {
+                document.getElementById('api-key-container').style.display = 'none';
+            }
+        });
+
+        const apiUrl = 'https://api.openai.com/v1/chat/completions';
+
+        document.getElementById('send-button').addEventListener('click', async () => {
+            const inputField = document.getElementById('input-field');
+            const message = inputField.value.trim();
+
+            if (message === '') return;
+
+            addMessageToChat(message, 'user');
+
+            const response = await callChatGPTAPI(message);
+
+            if (response && response.choices && response.choices[0].message.content) {
+                addMessageToChat(response.choices[0].message.content, 'bot');
+            } else {
+                addMessageToChat('Error: Unable to fetch response.', 'bot');
+            }
+
+            inputField.value = '';
+        });
+
+        function addMessageToChat(message, sender) {
+            const chatOutput = document.getElementById('chat-output');
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('chat-message', sender === 'user' ? 'user-message' : 'bot-message');
+            messageElement.textContent = message;
+            chatOutput.appendChild(messageElement);
+            chatOutput.scrollTop = chatOutput.scrollHeight;
+        }
+
+        async function callChatGPTAPI(message) {
+            if (!apiKey) {
+                alert('API key is not set.');
+                return null;
+            }
+
+            const payload = {
+                model: "gpt-4o",
+                messages: [{ role: "user", content: message }],
+                max_tokens: 100,
+                temperature: 0.7
+            };
+
+            const headers = {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${apiKey}`
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: "POST",
+                    headers: headers,
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Error:', error);
+                return null;
+            }
+        }
+    </script>
+
+</body>
+</html>
