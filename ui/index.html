@@ -75,8 +75,9 @@
         .suggestion {
             height: 100px;
             /*color: #aaa;*/
-            /*position: sticky;*/
-            /*top: 200px;*/
+            position: relative;
+            top: 10px;
+            left: 10px;
             /*pointer-events: none;*/
             /*font-family: monospace;*/
         }
@@ -124,21 +125,19 @@
     // Find matching text from the possible texts array
     function findMatchingText(input) {
         if (input.length === 0) return null;
-        return possibleTexts.find(text => text.toLowerCase().startsWith(input.toLowerCase()));
+        return possibleTexts.find(text => text.toLowerCase().includes(input.toLowerCase()));
     }
 
     // Show inline suggestion
     function showInlineAutocomplete(input, suggestion) {
-        const remainder = suggestion.substring(input.length);
-        console.log(`Input:${input}, remainder:${remainder}`)
-        suggestionText.textContent = input + remainder;
+        suggestionText.textContent = suggestion;
         suggestionText.style.display = 'block';
     }
 
     // Clear the suggestion
     function clearSuggestion() {
         suggestionText.textContent = '';
-        suggestionText.style.display = 'none';
+        // suggestionText.style.display = 'none';
     }
 </script>
 
