@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChatGPT-4o WebApp</title>
+    <title>ChatGPT-4o WebApp with Inline Autocomplete</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -15,234 +15,132 @@
             height: 100vh;
             margin: 0;
         }
+
         #chat-container {
-            width: 60%;
-            height: 80%;
+            width: 400px;
+            height: 600px;
             background-color: white;
             border-radius: 10px;
             overflow: hidden;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             display: flex;
             flex-direction: column;
         }
+
         #chat-output {
             flex: 1;
             padding: 20px;
             overflow-y: auto;
         }
+
         .chat-message {
             margin: 10px 0;
         }
+
         .user-message {
             text-align: right;
         }
+
         .bot-message {
             text-align: left;
         }
+
         #chat-input {
             display: flex;
             padding: 10px;
             border-top: 1px solid #ddd;
             background-color: #fafafa;
+            position: relative;
         }
+
         #input-field {
             flex: 1;
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 5px;
-            width: calc(100% - 120px); /* Adjust width to account for the button */
             position: relative;
+            font-family: monospace;
         }
-        #input-field::after {
-            content: attr(data-suggestion);
-            position: absolute;
-            left: 10px;
-            top: 10px;
-            color: #aaa;
-            pointer-events: none;
-            display: block;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
+
         #send-button {
             padding: 10px 20px;
             border: none;
-            background-color: #FFA500; /* Changed to orange */
+            background-color: #4CAF50;
             color: white;
             border-radius: 5px;
             cursor: pointer;
             margin-left: 10px;
-            flex-shrink: 0; /* Prevent the button from shrinking */
         }
-        #api-key-container {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 20px;
-            padding: 10px;
-            border-bottom: 1px solid #ddd;
-            background-color: #fafafa;
-        }
-        #api-key-field {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            width: 60%;
-        }
-        #set-api-key-button {
-            padding: 10px 20px;
-            border: none;
-            background-color: #FFA500; /* Changed to orange */
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-left: 10px;
+
+        .suggestion {
+            height: 100px;
+            /*color: #aaa;*/
+            /*position: sticky;*/
+            /*top: 200px;*/
+            /*pointer-events: none;*/
+            /*font-family: monospace;*/
         }
     </style>
 </head>
 <body>
 
-    <div id="chat-container">
-        <div id="api-key-container">
-            <input type="text" id="api-key-field" placeholder="Enter your API key here..." />
-            <button id="set-api-key-button">Set API Key</button>
-        </div>
-        <div id="chat-output"></div>
-        <div id="chat-input">
-            <input type="text" id="input-field" placeholder="Type your message here..." oninput="debounceInput()" />
-            <button id="send-button">Send</button>
-        </div>
+<div id="chat-container">
+    <div id="chat-output"></div>
+    <div id="chat-input">
+        <input type="text" id="input-field" placeholder="Type your message here..." autocomplete="off"/>
+        <button id="send-button">Send</button>
     </div>
+    <div class="suggestion" id="suggestion-text"></div>
+</div>
 
-    <script>
-        // Pre-populated array of possible texts
-        const possibleTexts = ["Hello", "How are you?", "What is your name?", "Tell me a joke.", "Goodbye"];
+<script>
+    const possibleTexts = ["Hello", "How are you?", "What is the weather today?", "Tell me a joke", "Goodbye", "Can you help me?", "What's your name?"];
+    const inputField = document.getElementById('input-field');
+    const suggestionText = document.getElementById('suggestion-text');
 
-        let typingTimer;
-        const doneTypingInterval = 1000;
-
-        function debounceInput() {
-            clearTimeout(typingTimer);
-            typingTimer = setTimeout(sendMessage, doneTypingInterval);
-            autocomplete();
+    // Detect input changes
+    inputField.addEventListener('input', function () {
+        const input = this.value.trim();
+        const suggestion = findMatchingText(input);
+        if (suggestion && input !== suggestion) {
+            showInlineAutocomplete(input, suggestion);
+        } else {
+            clearSuggestion();
         }
+    });
 
-        function autocomplete() {
-            const inputField = document.getElementById('input-field');
-            const inputValue = inputField.value.toLowerCase();
-            const suggestion = possibleTexts.find(text => text.toLowerCase().startsWith(inputValue));
-
-            if (suggestion && inputValue) {
-                inputField.setAttribute('data-suggestion', suggestion);
-            } else {
-                inputField.removeAttribute('data-suggestion');
-            }
-        }
-
-        document.getElementById('input-field').addEventListener('keydown', function(event) {
-            if (event.key === 'Tab') {
-                event.preventDefault();
-                const suggestion = this.getAttribute('data-suggestion');
-                if (suggestion) {
-                    this.value = suggestion;
-                    this.removeAttribute('data-suggestion');
-                }
-            }
-        });
-
-        async function sendMessage() {
-            const inputField = document.getElementById('input-field');
-            const message = inputField.value.trim();
-
-            if (message === '') return;
-
-            addMessageToChat(message, 'user');
-
-            const response = await callChatGPTAPI(message);
-
-            if (response && response.choices && response.choices[0].message.content) {
-                addMessageToChat(response.choices[0].message.content, 'bot');
-            } else {
-                addMessageToChat('Error: Unable to fetch response.', 'bot');
-            }
-
-            inputField.value = '';
-        }
-
-        document.getElementById('input-field').addEventListener('input', debounceInput);
-
-        let apiKey = '';
-
-        document.getElementById('set-api-key-button').addEventListener('click', () => {
-            const apiKeyField = document.getElementById('api-key-field');
-            apiKey = apiKeyField.value.trim();
-            if (apiKey !== '') {
-                document.getElementById('api-key-container').style.display = 'none';
-            }
-        });
-
-        const apiUrl = 'https://api.openai.com/v1/chat/completions';
-
-        document.getElementById('send-button').addEventListener('click', async () => {
-            const inputField = document.getElementById('input-field');
-            const message = inputField.value.trim();
-
-            if (message === '') return;
-
-            addMessageToChat(message, 'user');
-
-            const response = await callChatGPTAPI(message);
-
-            if (response && response.choices && response.choices[0].message.content) {
-                addMessageToChat(response.choices[0].message.content, 'bot');
-            } else {
-                addMessageToChat('Error: Unable to fetch response.', 'bot');
-            }
-
-            inputField.value = '';
-        });
-
-        function addMessageToChat(message, sender) {
-            const chatOutput = document.getElementById('chat-output');
-            const messageElement = document.createElement('div');
-            messageElement.classList.add('chat-message', sender === 'user' ? 'user-message' : 'bot-message');
-            messageElement.textContent = message;
-            chatOutput.appendChild(messageElement);
-            chatOutput.scrollTop = chatOutput.scrollHeight;
-        }
-
-        async function callChatGPTAPI(message) {
-            if (!apiKey) {
-                alert('API key is not set.');
-                return null;
-            }
-
-            const payload = {
-                model: "gpt-4o",
-                messages: [{ role: "user", content: message }],
-                max_tokens: 100,
-                temperature: 0.7
-            };
-
-            const headers = {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${apiKey}`
-            };
-
-            try {
-                const response = await fetch(apiUrl, {
-                    method: "POST",
-                    headers: headers,
-                    body: JSON.stringify(payload)
-                });
-                const data = await response.json();
-                return data;
-            } catch (error) {
-                console.error('Error:', error);
-                return null;
+    // Accept the suggestion on 'Tab' or 'Right Arrow' key press
+    inputField.addEventListener('keydown', function (event) {
+        if (event.key === 'Tab' || event.key === 'ArrowRight') {
+            event.preventDefault(); // Prevent default tab behavior
+            const suggestion = suggestionText.textContent;
+            if (suggestion && suggestion.startsWith(inputField.value.trim())) {
+                inputField.value = suggestion;
+                clearSuggestion();
             }
         }
-    </script>
+    });
+
+    // Find matching text from the possible texts array
+    function findMatchingText(input) {
+        if (input.length === 0) return null;
+        return possibleTexts.find(text => text.toLowerCase().startsWith(input.toLowerCase()));
+    }
+
+    // Show inline suggestion
+    function showInlineAutocomplete(input, suggestion) {
+        const remainder = suggestion.substring(input.length);
+        console.log(`Input:${input}, remainder:${remainder}`)
+        suggestionText.textContent = input + remainder;
+        suggestionText.style.display = 'block';
+    }
+
+    // Clear the suggestion
+    function clearSuggestion() {
+        suggestionText.textContent = '';
+        suggestionText.style.display = 'none';
+    }
+</script>
 
 </body>
 </html>
