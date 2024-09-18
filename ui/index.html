@@ -77,9 +77,9 @@
             /*color: #aaa;*/
             position: relative;
             top: 10px;
-            left: 10px;
-            /*pointer-events: none;*/
-            /*font-family: monospace;*/
+            left: 20px;
+            pointer-events: none;
+            font-family: monospace;
         }
     </style>
 </head>
@@ -115,7 +115,7 @@
         if (event.key === 'Tab' || event.key === 'ArrowRight') {
             event.preventDefault(); // Prevent default tab behavior
             const suggestion = suggestionText.textContent;
-            if (suggestion && suggestion.startsWith(inputField.value.trim())) {
+            if (suggestion) {
                 inputField.value = suggestion;
                 clearSuggestion();
             }
@@ -125,7 +125,13 @@
     // Find matching text from the possible texts array
     function findMatchingText(input) {
         if (input.length === 0) return null;
-        return possibleTexts.find(text => text.toLowerCase().includes(input.toLowerCase()));
+        const searchString = input.replaceAll(' ', '').toLowerCase();
+        console.log(`Search:{}`, searchString);
+        return possibleTexts.find(text => {
+            const transformed = text.toLowerCase().replaceAll(' ', '');
+            console.log(`Transformed:{}`, transformed);
+            return transformed.includes(searchString);
+        });
     }
 
     // Show inline suggestion
