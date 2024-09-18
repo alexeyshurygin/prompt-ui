@@ -50,6 +50,10 @@
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 5px;
+            width: calc(100% - 120px); /* Adjust width to account for the button */
+        }
+        .awesomplete {
+            width: 100%; /* Ensure the container is full width */
         }
         #send-button {
             padding: 10px 20px;
@@ -59,6 +63,7 @@
             border-radius: 5px;
             cursor: pointer;
             margin-left: 10px;
+            flex-shrink: 0; /* Prevent the button from shrinking */
         }
         #api-key-container {
             display: flex;
@@ -84,6 +89,8 @@
             margin-left: 10px;
         }
     </style>
+    <!-- Include Awesomplete CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.5/awesomplete.min.css" />
 </head>
 <body>
 
@@ -95,7 +102,16 @@
         <div id="chat-output"></div>
         <div id="chat-input">
             <input type="text" id="input-field" placeholder="Type your message here..." oninput="debounceInput()" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.5/awesomplete.min.js"></script>
             <script>
+                // Pre-populated array of possible texts
+                const possibleTexts = ["Hello", "How are you?", "What is your name?", "Tell me a joke.", "Goodbye"];
+
+                // Initialize Awesomplete
+                new Awesomplete(document.getElementById("input-field"), {
+                    list: possibleTexts
+                });
+
                 let typingTimer;
                 const doneTypingInterval = 1000;
 
@@ -128,7 +144,7 @@
     </div>
 
     <script>
-        let apiKey = '';  // Initialize as empty
+        let apiKey = '';
 
         document.getElementById('set-api-key-button').addEventListener('click', () => {
             const apiKeyField = document.getElementById('api-key-field');
