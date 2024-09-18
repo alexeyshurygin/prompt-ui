@@ -51,9 +51,19 @@
             border: 1px solid #ddd;
             border-radius: 5px;
             width: calc(100% - 120px); /* Adjust width to account for the button */
+            position: relative;
         }
-        .awesomplete {
-            width: 100%; /* Ensure the container is full width */
+        #input-field::after {
+            content: attr(data-suggestion);
+            position: absolute;
+            left: 10px;
+            top: 10px;
+            color: #aaa;
+            pointer-events: none;
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         #send-button {
             padding: 10px 20px;
@@ -89,8 +99,6 @@
             margin-left: 10px;
         }
     </style>
-    <!-- Include Awesomplete CSS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.5/awesomplete.min.css" />
 </head>
 <body>
 
@@ -102,48 +110,67 @@
         <div id="chat-output"></div>
         <div id="chat-input">
             <input type="text" id="input-field" placeholder="Type your message here..." oninput="debounceInput()" />
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.5/awesomplete.min.js"></script>
-            <script>
-                // Pre-populated array of possible texts
-                const possibleTexts = ["Hello", "How are you?", "What is your name?", "Tell me a joke.", "Goodbye"];
-
-                // Initialize Awesomplete
-                new Awesomplete(document.getElementById("input-field"), {
-                    list: possibleTexts
-                });
-
-                let typingTimer;
-                const doneTypingInterval = 1000;
-
-                function debounceInput() {
-                    clearTimeout(typingTimer);
-                    typingTimer = setTimeout(sendMessage, doneTypingInterval);
-                }
-
-                async function sendMessage() {
-                    const inputField = document.getElementById('input-field');
-                    const message = inputField.value.trim();
-
-                    if (message === '') return;
-
-                    addMessageToChat(message, 'user');
-
-                    const response = await callChatGPTAPI(message);
-
-                    if (response && response.choices && response.choices[0].message.content) {
-                        addMessageToChat(response.choices[0].message.content, 'bot');
-                    } else {
-                        addMessageToChat('Error: Unable to fetch response.', 'bot');
-                    }
-                }
-
-                document.getElementById('input-field').addEventListener('input', debounceInput);
-            </script>
             <button id="send-button">Send</button>
         </div>
     </div>
 
     <script>
+        // Pre-populated array of possible texts
+        const possibleTexts = ["Hello", "How are you?", "What is your name?", "Tell me a joke.", "Goodbye"];
+
+        let typingTimer;
+        const doneTypingInterval = 1000;
+
+        function debounceInput() {
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(sendMessage, doneTypingInterval);
+            autocomplete();
+        }
+
+        function autocomplete() {
+            const inputField = document.getElementById('input-field');
+            const inputValue = inputField.value.toLowerCase();
+            const suggestion = possibleTexts.find(text => text.toLowerCase().startsWith(inputValue));
+
+            if (suggestion && inputValue) {
+                inputField.setAttribute('data-suggestion', suggestion);
+            } else {
+                inputField.removeAttribute('data-suggestion');
+            }
+        }
+
+        document.getElementById('input-field').addEventListener('keydown', function(event) {
+            if (event.key === 'Tab') {
+                event.preventDefault();
+                const suggestion = this.getAttribute('data-suggestion');
+                if (suggestion) {
+                    this.value = suggestion;
+                    this.removeAttribute('data-suggestion');
+                }
+            }
+        });
+
+        async function sendMessage() {
+            const inputField = document.getElementById('input-field');
+            const message = inputField.value.trim();
+
+            if (message === '') return;
+
+            addMessageToChat(message, 'user');
+
+            const response = await callChatGPTAPI(message);
+
+            if (response && response.choices && response.choices[0].message.content) {
+                addMessageToChat(response.choices[0].message.content, 'bot');
+            } else {
+                addMessageToChat('Error: Unable to fetch response.', 'bot');
+            }
+
+            inputField.value = '';
+        }
+
+        document.getElementById('input-field').addEventListener('input', debounceInput);
+
         let apiKey = '';
 
         document.getElementById('set-api-key-button').addEventListener('click', () => {
